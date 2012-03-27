@@ -872,6 +872,18 @@ abstract class moodleform {
     }
 
     /**
+     * Returns html for the mform rather than outputting it
+     *
+     * @return string mform html
+     */
+    public function render() {  
+        // use output buffering to return form html
+        ob_start();
+        $this->display();
+        return ob_get_clean();
+    }
+    
+    /**
      * Abstract method - always override!
      */
     protected abstract function definition();
