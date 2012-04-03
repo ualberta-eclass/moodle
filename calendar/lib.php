@@ -2250,11 +2250,15 @@ class calendar_event {
         global $CFG;
         static $extcalendarinc;
         if ($extcalendarinc === null) {
-            if (!empty($CFG->calendar) && file_exists($CFG->dirroot .'/calendar/'. $CFG->calendar .'/lib.php')) {
-                include_once($CFG->dirroot .'/calendar/'. $CFG->calendar .'/lib.php');
-                $extcalendarinc = true;
-            } else {
-                $extcalendarinc = false;
+            if (!empty($CFG->calendar)) {
+                if (is_readable($CFG->dirroot .'/calendar/'. $CFG->calendar .'/lib.php')) {
+                    include_once($CFG->dirroot .'/calendar/'. $CFG->calendar .'/lib.php');
+                    $extcalendarinc = true;
+                } else {
+                    debugging("DEVELOPER HINT: lib file missing or not readable at /calendar/{$CFG->calendar}/lib.php.",
+                        DEBUG_DEVELOPER);
+                    $extcalendarinc = false;
+                }
             }
         }
         if($extcalendarinc === false) {
