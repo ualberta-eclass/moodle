@@ -4626,7 +4626,13 @@ WHERE gradeitemid IS NOT NULL AND grademax IS NOT NULL");
                             $dbman->drop_table($table);
                         }
                     }
-                    $DB->delete_records('event', array('modulename' => 'exercise'));
+
+                    // delete events; use calendar API so hooks are called
+                    $events = $DB->get_records('event', array('modulename' => 'exercise'));
+                    foreach ($events as $event) {
+                        $cal = calendar_event::load($event);
+                        $cal->delete(false);
+                    }
                     $DB->delete_records('log', array('module' => 'exercise'));
                     $DB->delete_records('modules', array('name'=>'exercise'));
                 }
@@ -4650,7 +4656,13 @@ WHERE gradeitemid IS NOT NULL AND grademax IS NOT NULL");
                             $dbman->drop_table($table);
                         }
                     }
-                    $DB->delete_records('event', array('modulename' => 'journal'));
+
+                    // use calendar API so hooks are called
+                    $events = $DB->get_records('event', array('modulename' => 'journal'));
+                    foreach ($events as $event) {
+                        $cal = calendar_event::load($event);
+                        $cal->delete(false);
+                    }
                     $DB->delete_records('log', array('module' => 'journal'));
                     $DB->delete_records('modules', array('name'=>'journal'));
                     unset_config('journal_initialdisable');
@@ -4675,7 +4687,12 @@ WHERE gradeitemid IS NOT NULL AND grademax IS NOT NULL");
                             $dbman->drop_table($table);
                         }
                     }
-                    $DB->delete_records('event', array('modulename' => 'lams'));
+                    // use calendar API so hooks are called
+                    $events = $DB->get_records('event', array('modulename' => 'lams'));
+                    foreach ($events as $event) {
+                        $cal = calendar_event::load($event);
+                        $cal->delete(false);
+                    }
                     $DB->delete_records('log', array('module' => 'lams'));
                     $DB->delete_records('modules', array('name'=>'lams'));
                     unset_config('lams_initialdisable');

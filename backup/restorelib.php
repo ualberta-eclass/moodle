@@ -513,7 +513,10 @@
                             }
 
                             //The structure is equal to the db, so insert the event
-                            $newid = $DB->insert_record ("event",$eve);
+                            // use calendar API so hooks called
+                            $cal = new calendar_event();
+                            $event = $cal->update($eve);
+                            $newid = $event->id;
 
                             //We must recode the repeatid if the event has it
                             //The repeatid now refers to the id of the original event. (see Bug#5956)
@@ -528,7 +531,8 @@
                                 }
                                 $eve->id = $newid;
                                 // update the record to contain the correct repeatid
-                                $DB->update_record('event',$eve);
+                                $cal = new calendar_event();
+                                $cal->update($eve);
                             }
                         } else {
                             //get current event id
