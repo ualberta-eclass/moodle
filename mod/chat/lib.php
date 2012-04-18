@@ -196,8 +196,14 @@ function chat_delete_instance($id) {
         $result = false;
     }
 
-    if (! $DB->delete_records('event', array('modulename'=>'chat', 'instance'=>$chat->id))) {
-        $result = false;
+    // delete calendar events; use calendar API so hooks are called
+    $events = $DB->get_records('event', array('modulename'=>'chat', 'instance'=>$chat->id));
+    $result = true;
+    foreach ($events as $event) {
+        $cal = calendar_event::load($event);
+        if (! $cal->delete(false)) {
+            $result = false;
+        }
     }
 
     return $result;
