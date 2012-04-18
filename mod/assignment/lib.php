@@ -519,8 +519,14 @@ class assignment_base {
             $result = false;
         }
 
-        if (! $DB->delete_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id))) {
-            $result = false;
+        // delete calendar events; use calendar API so hooks are called
+        $events = $DB->get_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id));
+
+        foreach ($events as $event) {
+            $cal = calendar_event::load($event);
+            if (! $cal->delete(false)) {
+                $result = false;
+            }
         }
 
         if (! $DB->delete_records('assignment', array('id'=>$assignment->id))) {
@@ -584,7 +590,12 @@ class assignment_base {
                 calendar_event::create($event);
             }
         } else {
-            $DB->delete_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id));
+            // use calendar API
+            $events = $DB->get_records('event', array('modulename'=>'assignment', 'instance'=>$assignment->id));
+            foreach ($events as $event) {
+                $cal = calendar_event::load($event);
+                $cal->delete(false);
+            }
         }
 
         // get existing grade item
