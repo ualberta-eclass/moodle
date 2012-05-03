@@ -2031,6 +2031,15 @@ class calendar_event {
             $updaterepeated = (!empty($this->properties->repeatid) && !empty($this->properties->repeateditall));
 
             if ($updaterepeated) {
+                
+                // store array of eventids that will be updated to pass to hook
+                $repeatedids = array();
+                $repeats = $DB->get_records('event', array('repeatid' => $event->repeatid));
+                
+                foreach($repeats as $r) {
+                    $repeatedids[] = $r->id;
+                }
+                
                 // Update all
                 if ($this->properties->timestart != $event->timestart) {
                     $timestartoffset = $this->properties->timestart - $event->timestart;
@@ -2058,7 +2067,7 @@ class calendar_event {
             }
 
             // Hook for tracking event updates
-            self::calendar_event_hook('update_event', array($this->properties, $updaterepeated));
+            self::calendar_event_hook('update_event', array($this->properties, $repeatedids));
             return true;
         }
     }
@@ -2100,9 +2109,9 @@ class calendar_event {
             }
         }
 
-        // Fire the event deleted hook
-        self::calendar_event_hook('delete_event', array($this->properties->id, $deleterepeated));
-
+        //
+        $repeatedids = array();
+        
         // If we need to delete repeated events then we will fetch them all and delete one by one
         if ($deleterepeated && !empty($this->properties->repeatid) && $this->properties->repeatid > 0) {
             // Get all records where the repeatid is the same as the event being removed
@@ -2111,8 +2120,18 @@ class calendar_event {
             // make sure the arg passed is false as we are already deleting all repeats
             foreach ($events as $event) {
                 $event = new calendar_event($event);
+                $repeatedids[] = $event->id;
                 $event->delete(false);
             }
+            
+            // Fire the event deleted hook
+            self::calendar_event_hook('delete_event', array($this->properties->id, $repeatedids));
+            
+        } else {
+            
+            // Fire the event deleted hook
+            self::calendar_event_hook('delete_event', array($this->properties->id, NULL));
+            
         }
 
         return true;
