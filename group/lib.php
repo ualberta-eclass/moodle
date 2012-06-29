@@ -343,8 +343,9 @@ function groups_delete_group($grouporid) {
         }
     }
 
-    // delete group calendar events
-    $DB->delete_records('event', array('groupid'=>$groupid));
+    // delete group calendar events; use calendar API so hooks are called
+    calendar_event::delete_events(array('groupid' => $groupid));
+        
     //first delete usage in groupings_groups
     $DB->delete_records('groupings_groups', array('groupid'=>$groupid));
     //delete members
@@ -488,10 +489,9 @@ function groups_delete_groups($courseid, $showfeedback=false) {
     $fs = get_file_storage();
     $fs->delete_area_files($context->id, 'group');
 
-    // delete group calendar events
-    $groupssql = "SELECT id FROM {groups} g WHERE g.courseid = ?";
-    $DB->delete_records_select('event', "groupid IN ($groupssql)", array($courseid));
-
+    // delete all group calendar events for this course
+    calendar_event::delete_course_group_events($courseid);
+    
     $context = get_context_instance(CONTEXT_COURSE, $courseid);
     $fs = get_file_storage();
     $fs->delete_area_files($context->id, 'group');

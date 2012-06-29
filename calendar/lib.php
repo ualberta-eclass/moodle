@@ -1895,7 +1895,7 @@ class calendar_event {
         }
 
         if (empty($data->context)) {
-            $data->context = $this->calculate_context($data);
+            $data->context = calendar_event::calculate_context($data);
         }
         $this->properties = $data;
     }
@@ -1956,7 +1956,7 @@ class calendar_event {
      * @param stdClass $data information about event
      * @return stdClass The context object.
      */
-    protected function calculate_context(stdClass $data) {
+    protected static function calculate_context(stdClass $data) {
         global $USER, $DB;
 
         $context = null;
@@ -2295,7 +2295,109 @@ class calendar_event {
 
         return true;
     }
+    
+    /**
+     * Delete events based on a conditions array that contains
+     * 
+     *     courseid OR
+     *     groupid OR
+     *     userid OR 
+     *     modulename [AND instanceid]
+     *     
+     * This will delete all child (repeat) events that meet the same conditions.
+     * 
+     * @param array $conditions
+     */
+    public static function delete_events(array $conditions = array()) {
+        global $DB;
+    
+        // array of eventids
+        $eventids = array();
+        
+        // If $conditions is not set then something is wrong
+        if (empty($conditions)) {
+            debugging('No conditions passed in to delete_events.', DEBUG_DEVELOPER);
+            return false;
+        }
+    
+        // fetch list of eventids so can take care of files and repeat events
+        if (array_key_exists('courseid', $conditions)) {
+            
+            $where_sql = 'courseid = :courseid';
+            
+        } else if (array_key_exists('groupid', $conditions)) {
+            
+            $where_sql = 'groupid = :groupid';
+            
+        } else if (array_key_exists('userid', $conditions)) {
+            
+            $where_sql = 'userid = :userid';
+            
+        } else if (array_key_exists('modulename', $conditions)) {
+            
+            $where_sql .= 'modulename = :modulename';
+            
+            // optional instance param
+            if (array_key_exists('instanceid', $conditions)) {
+                $where_sql .= ' AND instanceid = :instanceid';
+            }
+        }
+        
+        // select all events; should return children of repeat events
+        $events = $DB->get_records_select('event', 'id', $where_sql, $conditions);
+        
+        // deal with each event's files
+        foreach ($events as $event) {
+            
+            // append to array
+            $eventids[] = $event->id;
+            
+            // stdClass to store properties in
+            $event_obj = new stdClass();
+            
+            // id
+            $event_obj->id = $event->id;
+            
+            // set possible properties: courseid, groupid, userid, modulename, instanceid
+            foreach ($conditions as $key => $value) {
+                $event_obj->$key = $value;
+            }
+            
+            // calculate context
+            $event_obj->context = self::calculate_context($event_obj);
+        
+            // If the context has been set delete all associated files
+            if ($event_obj->context !== null) {
+                $fs = get_file_storage();
+                $files = $fs->get_area_files($event_obj->context->id, 'calendar', 'event_description', $event_obj->id);
+                foreach ($files as $file) {
+                    $file->delete();
+                }
+            }
+        
+            // Fire the event deleted hook
+            self::calendar_event_hook('delete_event', array($event_obj->id, false));
 
+        }
+        
+        // finally, delete events
+        $DB->delete_records_list('event', 'id', $eventids);
+    
+        return true;
+    }
+    
+    public static function delete_course_group_events($courseid) {
+    
+        global $DB;
+        
+        // find groups
+        $groups = $DB->get_records('groups', array('courseid' => $courseid), 'id', 'id');
+
+        foreach ($groups as $group) {
+            self::delete_events(array('groupid' => $group->id));
+        }
+    }
+    
     /**
      * Fetch all event properties
      *

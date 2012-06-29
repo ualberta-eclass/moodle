@@ -4797,7 +4797,8 @@ function reset_course_userdata($data) {
     }
 
     if (!empty($data->reset_events)) {
-        $DB->delete_records('event', array('courseid'=>$data->courseid));
+        // delete calendar events; use calendar API so hooks are called
+        calendar_event::delete_events(array('courseid' => $data->courseid));
         $status[] = array('component'=>$componentstr, 'item'=>get_string('deleteevents', 'calendar'), 'error'=>false);
     }
 

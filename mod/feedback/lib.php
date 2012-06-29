@@ -315,8 +315,9 @@ function feedback_delete_instance($id) {
     //deleting the unfinished completeds
     $DB->delete_records("feedback_completedtmp", array("feedback"=>$id));
 
-    //deleting old events
-    $DB->delete_records('event', array('modulename'=>'feedback', 'instance'=>$id));
+    //deleting old events; use calendar API so hooks are called
+    calendar_event::delete_events(array('modulename'=>'feedback', 'instanceid'=>$id));
+
     return $DB->delete_records("feedback", array("id"=>$id));
 }
 
@@ -741,8 +742,12 @@ function feedback_set_events($feedback) {
     global $DB;
 
     // adding the feedback to the eventtable (I have seen this at quiz-module)
-    $DB->delete_records('event', array('modulename'=>'feedback', 'instance'=>$feedback->id));
-
+    // use calendar API so hooks are called
+    $events = $DB->get_records('event', array('modulename'=>'feedback', 'instance'=>$feedback->id));
+    foreach ($events as $event) {
+        $cal = calendar_event::load($event);
+        $cal->delete(false);
+    }
     if (!isset($feedback->coursemodule)) {
         $cm = get_coursemodule_from_id('feedback', $feedback->id);
         $feedback->coursemodule = $cm->id;

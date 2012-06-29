@@ -273,9 +273,9 @@ function uninstall_plugin($type, $name) {
     require_once($CFG->dirroot.'/lib/externallib.php');
     external_delete_descriptions($component);
 
-    // delete calendar events
-    $DB->delete_records('event', array('modulename' => $pluginname));
-
+    // delete calendar events; use calendar API so hooks are called
+    calendar_event::delete_events(array('modulename' => $pluginname));
+    
     // delete all the logs
     $DB->delete_records('log', array('module' => $pluginname));
 
