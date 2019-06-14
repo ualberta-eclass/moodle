@@ -605,7 +605,8 @@ class pdf extends \FPDI {
     }
 
     /**
-     * Check to see if PDF is version 1.4 (or below); if not: use ghostscript to convert it
+     * Use ghostscript to convert PDFs of version 1.4 or less,
+     * and PDFs containing annotation layers into single layer PDFs.
      *
      * @param   string $tempsrc The path to the file on disk.
      * @return  string path to copy or converted pdf (false == fail)
@@ -613,28 +614,13 @@ class pdf extends \FPDI {
     public static function ensure_pdf_file_compatible($tempsrc) {
         global $CFG;
 
-        $pdf = new pdf();
-        $pagecount = 0;
-        try {
-            $pagecount = $pdf->load_pdf($tempsrc);
-        } catch (\Exception $e) {
-            // PDF was not valid - try running it through ghostscript to clean it up.
-            $pagecount = 0;
-        }
-        $pdf->Close(); // PDF loaded and never saved/outputted needs to be closed.
-
-        if ($pagecount > 0) {
-            // PDF is already valid and can be read by tcpdf.
-            return $tempsrc;
-        }
-
         $temparea = make_request_directory();
         $tempdst = $temparea . "/target.pdf";
 
         $gsexec = \escapeshellarg($CFG->pathtogs);
         $tempdstarg = \escapeshellarg($tempdst);
         $tempsrcarg = \escapeshellarg($tempsrc);
-        $command = "$gsexec -q -sDEVICE=pdfwrite -dBATCH -dNOPAUSE -sOutputFile=$tempdstarg $tempsrcarg";
+        $command = "$gsexec -q -sDEVICE=pdfimage24 -dBATCH -dNOPAUSE -sOutputFile=$tempdstarg $tempsrcarg";
         exec($command);
         if (!file_exists($tempdst)) {
             // Something has gone wrong in the conversion.
